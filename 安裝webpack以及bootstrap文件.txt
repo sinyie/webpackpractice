@@ -1,0 +1,144 @@
+安裝檔案參考webpacktest
+
+1.安裝git
+1-1 在github中創建資料夾，並下載至本機
+1-2 在根目錄新增檔案：gitignore
+1-3 撰寫忽略追蹤node_modules資料夾：
+# 忽略所有的 node_modules
+node_modules/
+# 但不要忽略 node_modules 中的 某一資料夾
+!node_modules/bootstrap/
+
+
+2.安裝Webpack
+2-1 先確定電腦有安裝node.js、npm
+2-2 執行初始化npm，創建package.json：npm init
+2-3 修改package.json，建立開發及打包的執行指令
+"scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack --mode development --watch",
+    "prod": "webpack --mode production"
+  },
+2-4 執行安裝Webpack：npm install --save-dev webpack webpack-cli
+2-5 在根目錄新增檔案：webpack.config.js
+
+
+3.建立webpack檔案夾結構，並指定進入點
+3-1 初始檔案結構參考
+webpack-demo/
+│
+├─── node_modules/
+├─── src/
+│   │
+│   └─── scss/
+│       │
+│       └─── layout.scss  # CSS 主檔案
+│   │
+│   └─── main.js          # entry 入口檔案
+│
+├─── index.html            # 引入 bundle.js 與 main.css 測試用檔案
+├─── webpack.config.js     # Webpack 配置檔案
+├─── package-lock.json
+└─── package.json
+
+3-2 增加src/main.js檔案，作為webpack的進入點，初始寫法參考以下：
+//webpack.config.js
+const path = require('path');
+module.exports = {
+  entry: './src/main.js',
+  output: {
+    path: path.resolve(__dirname, 'dist'),
+    filename: 'bundle.js',
+  },
+
+};
+3-3 在根目錄新增檔案：index.html，引用打包後檔案：<script src="dist/bundle.js"></script>
+3-4 執行測試：npm run build
+3-5 完成基本的webpack的專案結構
+
+
+4.安裝bootstrap及bootstrap必要套件
+4-1 安裝bootstrap： npm install bootstrap
+4-2 在專案進入點(main.js)加入：import { Tooltip, Toast, Popover } from 'bootstrap';
+4-3 匯入bootstrap的sass檔案進入統整編譯css的主檔案(layout.scss)：
+例：
+@import "custom_variables";(要覆蓋Bootstrap的自定義變數放在bootstrap前，客製化scss順序請看webpacktest資料夾)
+@import "~bootstrap/scss/bootstrap";(Bootstrap的全部scss檔)
+
+4-4 安裝Popper：npm install @popperjs/core --dev
+4-5 安裝sass-loader、 postcss-loader、Autoprefixer：npm install sass-loader postcss-loader autoprefixer  --save-dev
+4-6 如果沒有要安裝額外scss相關套件，就依照Bootstrap官網指令，撰寫Webpack.config.js相關設定
+
+
+5.安裝sass、css-loader、mini-css-extract-plugin 將 CSS 給單獨抽離出bundle.js
+5-1 安裝sass：npm install sass -D
+5-2 安裝css-loader：npm install css-loader -D
+5-3 安裝mini-css-extract-plugin：npm install mini-css-extract-plugin -D
+
+6.在webpack.config.js中，設定sass-loader、 postcss-loader、Autoprefixer、css-loader、mini-css-extract-plugin，並產生source.map
+6-1 引入獨立提取出css檔案的套件：const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+6-2 在module.exports 中撰寫以下指令：
+module.exports = {
+  // Webpack 配置中的 entry: './src/main.js' 則是指定 Webpack 打包過程的入口點（entry point）。這個 entry 屬性告訴 Webpack 從哪個檔案開始構建 bundle。在這個例子中，Webpack 將從 './src/main.js' 開始，並根據這個入口點構建應用程序的整個依賴圖。
+  entry: './src/main.js',
+  output: {
+	// 設定打包後的 JavaScript 檔案放置路徑，通常都會搭配 path 模組以形成絕對路徑，__dirname為檔案的絕對路徑
+    path: path.resolve(__dirname, 'dist'),
+    filename: 'bundle.js',
+  },
+  module: {
+		rules: [
+			{
+        // 針對sass或scss檔案處理
+        test: /\.s[ac]ss$/i,
+        // 新增 loader (第三步)
+        use: [MiniCssExtractPlugin.loader, 'css-loader'],
+        use: [
+          MiniCssExtractPlugin.loader,
+          {
+            loader: 'css-loader',
+            options: {
+              sourceMap: true, // 启用css-loader的sourcemap
+            },
+          },
+          {
+            // Run postcss actions
+            loader: 'postcss-loader',
+            options: {
+              // `postcssOptions` is needed for postcss 8.x;
+              // if you use postcss 7.x skip the key
+              postcssOptions: {
+                // postcss plugins, can be exported to postcss.config.js
+                plugins: function () {
+                  return [
+                    require('autoprefixer')
+                  ];
+                },
+              },
+              sourceMap: true, // 启用postcss-loader的sourcemap
+            }
+          }, 
+          {
+            // compiles Sass to CSS
+            loader: 'sass-loader',
+            options: {
+              sourceMap: true, // 启用sass-loader的sourcemap
+            },
+          }
+        ]
+      },
+		]
+	},
+  // 創建實例
+  plugins: [
+    new MiniCssExtractPlugin(
+      {
+        filename: 'layout.css'
+      }
+    ),
+  ],
+  devtool: 'source-map', // 启用webpack的sourcemap
+};
+6-3 在進入點 (src/main.js) 引入 CSS 檔案：import './css/layout.css'; // 使用 ESM 方式引入
+6-4 在index.html中引入layout.css檔：<link rel="stylesheet" href="dist/layout.css"> 
+6-5 運行npm run build 即可編譯運行Bootstrap
